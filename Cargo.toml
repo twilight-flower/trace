@@ -12,7 +12,7 @@ matrix-sdk = { version = "0.7.1", features = ["bundled-sqlite", "e2e-encryption"
 
 anyhow = "1.0.79"
 futures = "0.3.30"
-tokio = { version = "1.35.1", features = ["full"] }
+tokio = { version = "1.38.2", features = ["full"] }
 
 # Miscellaneously-useful helpers
 argh = "0.1.12"
