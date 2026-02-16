@@ -20,8 +20,8 @@ use matrix_sdk::{
     ruma::{
         events::{
             room::message::MessageType,
-            AnyMessageLikeEvent,
-            AnyTimelineEvent,
+            AnySyncMessageLikeEvent,
+            AnySyncTimelineEvent,
         },
         UserId
     },
@@ -80,8 +80,8 @@ fn messages_to_json(events: &Vec<TimelineEvent>) -> String {
     let mut events_to_export = Vec::new();
 
     for event in events {
-        let event_serialized = event.event.deserialize_as::<serde_json::Value>().expect("Failed to deserialize a message to JSON value. (This is surprising.)"); // Add real error-handling here
-        events_to_export.push(event_serialized);
+        let event_deserialized = event.raw().deserialize_as::<serde_json::Value>().expect("Failed to deserialize a message to JSON value. (This is surprising.)"); // Add real error-handling here
+        events_to_export.push(event_deserialized);
     }
 
     serde_json::to_string_pretty(&events_to_export).unwrap()
@@ -113,7 +113,7 @@ async fn messages_to_txt(events: &Vec<TimelineEvent>, room_info: &RoomWithCached
     let mut room_export = String::new();
 
     for event in events {
-        let event_deserialized = match event.event.deserialize() {
+        let event_deserialized = match event.raw().deserialize() {
             Ok(event_deserialized) => event_deserialized,
             Err(_) => {
                 // Add more nuanced error-handling here; it seems like a lot of these are in fact redacted messages, just weirdly-formed ones that don't deserialize right?
@@ -131,8 +131,8 @@ async fn messages_to_txt(events: &Vec<TimelineEvent>, room_info: &RoomWithCached
         let event_prefix = format!("[{}] {}:", event_timestamp_string_representation, event_sender_string_representation);
 
         let event_stringified = match &event_deserialized {
-            AnyTimelineEvent::MessageLike(e) => match e {
-                AnyMessageLikeEvent::RoomMessage(e) => match &e.as_original() {
+            AnySyncTimelineEvent::MessageLike(e) => match e {
+                AnySyncMessageLikeEvent::RoomMessage(e) => match &e.as_original() {
                     Some(unredacted_room_message) => match &unredacted_room_message.content.msgtype {
                         // Possibly revisit here at some point to add more detail beyond the body into various of these formats
                         MessageType::Audio(e) => format!("{} [Audio; textual representation: {}]", event_prefix, &e.body),
@@ -151,7 +151,7 @@ async fn messages_to_txt(events: &Vec<TimelineEvent>, room_info: &RoomWithCached
                 },
                 _ => String::from("[Placeholder message-like]"),
             },
-            AnyTimelineEvent::State(_e) => String::from("[Placeholder state-like]"),
+            AnySyncTimelineEvent::State(_e) => String::from("[Placeholder state-like]"),
         };
         room_export.push_str(&format!("{}\n", event_stringified))
     }

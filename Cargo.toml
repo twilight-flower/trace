@@ -8,17 +8,17 @@ edition = "2021"
 [dependencies]
 
 # Matrix SDK and directly-related tools
-matrix-sdk = { version = "0.7.1", features = ["bundled-sqlite", "e2e-encryption", "rustls-tls"], default-features = false }
+matrix-sdk = { version = "0.16.0", features = ["bundled-sqlite", "e2e-encryption", "rustls-tls"], default-features = false }
 
-anyhow = "1.0.79"
-futures = "0.3.30"
-tokio = { version = "1.35.1", features = ["full"] }
+anyhow = "1.0.101"
+futures = "0.3.32"
+tokio = { version = "1.49.0", features = ["full"] }
 
 # Miscellaneously-useful helpers
-argh = "0.1.12"
-chrono = "0.4.33"
-directories = "5.0.1"
-rpassword = "7.3.1"
-serde = "1.0.195"
-serde_json = "1.0.111"
-text_io = "0.1.12"
+argh = "0.1.14"
+chrono = "0.4.43"
+directories = "6.0.0"
+rpassword = "7.4.0"
+serde = "1.0.228"
+serde_json = "1.0.149"
+text_io = "0.1.13"

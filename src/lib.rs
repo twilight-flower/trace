@@ -15,21 +15,9 @@ use std::{
 use directories::ProjectDirs;
 use futures::future::join_all;
 use matrix_sdk::{
-    config::SyncSettings,
-    matrix_auth::{
-        MatrixSession,
-        MatrixSessionTokens,
-    }, 
-    ruma::{
-        api::client::session::get_login_types::v3::LoginType,
-        presence::PresenceState,
-        OwnedRoomAliasId,
-        OwnedRoomId,
-        UserId,
-    },
-    Client,
-    Room,
-    SessionMeta,
+    Client, Room, SessionMeta, authentication::{SessionTokens, matrix::MatrixSession}, config::SyncSettings, ruma::{
+        OwnedRoomAliasId, OwnedRoomId, UserId, api::client::session::get_login_types::v3::LoginType, presence::PresenceState
+    }, store::RoomLoadSettings
 };
 use serde::{
     Deserialize,
@@ -160,11 +148,11 @@ pub async fn nonfirst_login(user_id: &str, sessions_file: &SessionsFile, store_p
             user_id: user,
             device_id: session.device_id.into(),
         },
-        tokens: MatrixSessionTokens {
+        tokens: SessionTokens {
             access_token: session.access_token,
             refresh_token: session.refresh_token,
         }
-    }).await?;
+    }, RoomLoadSettings::default()).await?;
     client.encryption().wait_for_e2ee_initialization_tasks().await;
 
     Ok(client)
