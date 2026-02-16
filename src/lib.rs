@@ -73,7 +73,7 @@ impl SessionsFile {
                 sessions,
             }
         } else {
-            create_dir_all(&path.parent().expect("Tried to open root as sessions file. (This should never happen.")).unwrap();
+            create_dir_all(path.parent().expect("Tried to open root as sessions file. (This should never happen.")).unwrap();
             write(&path, "[]").unwrap();
             Self {
                 path,
@@ -83,14 +83,14 @@ impl SessionsFile {
     }
 
     pub fn get(&self, user_id: &str) -> Result<Session, String> {
-        match self.sessions.iter().find(|session| &session.user_id == user_id) {
+        match self.sessions.iter().find(|session| session.user_id == user_id) {
             Some(session) => Ok(session.clone()),
             None => Err(format!("Couldn't find currently-existing login session for user_id {}.", user_id))
         }
     }
 
     pub fn delete_session(&mut self, user_id: &str) -> Result<(), String> {
-        match self.sessions.iter().position(|session| &session.user_id == user_id) {
+        match self.sessions.iter().position(|session| session.user_id == user_id) {
             Some(session_index) => {
                 self.sessions.remove(session_index);
                 self.write();
@@ -177,10 +177,7 @@ pub async fn nonfirst_login(user_id: &str, sessions_file: &SessionsFile, store_p
 pub async fn first_login(client: &Client, sessions_file: &mut SessionsFile, user_id: &str, password: &str, session_name: Option<String>) -> anyhow::Result<()> {
     let auth = client.matrix_auth();
     let supported_login_types = auth.get_login_types().await?.flows;
-    let login_result = if supported_login_types.iter().any(|login_type| match login_type {
-        LoginType::Password(_) => true,
-        _ => false,
-    }) {
+    let login_result = if supported_login_types.iter().any(|login_type| matches!(login_type, LoginType::Password(_))) {
         let login_request = auth.login_username(user_id, password);
         if let Some(name) = session_name {
             login_request.initial_device_display_name(&name).send().await?
@@ -209,10 +206,10 @@ pub async fn logout_full(client: &Client, sessions_file: &mut SessionsFile, stor
     client.matrix_auth().logout().await?;
     remove_dir_all(store_path)?;
     let store_path_parent = store_path.parent().unwrap();
-    if let None = store_path_parent.read_dir()?.next() {
+    if store_path_parent.read_dir()?.next().is_none() {
         remove_dir_all(store_path_parent)?;
     }
-    sessions_file.delete_session(&client.user_id().unwrap().to_string()).unwrap();
+    sessions_file.delete_session(client.user_id().unwrap().as_ref()).unwrap();
 
     Ok(())
 }
@@ -220,7 +217,7 @@ pub async fn logout_full(client: &Client, sessions_file: &mut SessionsFile, stor
 pub fn logout_local(user_id: &str, sessions_file: &mut SessionsFile, store_path: &Path) -> anyhow::Result<()> {
     remove_dir_all(store_path)?;
     let store_path_parent = store_path.parent().unwrap();
-    if let None = store_path_parent.read_dir()?.next() {
+    if store_path_parent.read_dir()?.next().is_none() {
         remove_dir_all(store_path_parent)?;
     }
     sessions_file.delete_session(user_id).unwrap();
@@ -256,11 +253,11 @@ pub async fn get_rooms_info(client: &Client) -> anyhow::Result<Vec<RoomWithCache
         room,
     }).collect::<Vec<RoomWithCachedInfo>>();
     rooms_info.sort_by(|room_1, room_2| match (&room_1.name, &room_2.name) {
-        (Some(name_1), Some(name_2)) => name_1.cmp(&name_2),
+        (Some(name_1), Some(name_2)) => name_1.cmp(name_2),
         (Some(_name), None) => Ordering::Greater,
         (None, Some(_name)) => Ordering::Less,
         (None, None) => match (&room_1.canonical_alias, &room_2.canonical_alias) {
-            (Some(alias_1), Some(alias_2)) => alias_1.cmp(&alias_2),
+            (Some(alias_1), Some(alias_2)) => alias_1.cmp(alias_2),
             (Some(_alias), None) => Ordering::Greater,
             (None, Some(_alias)) => Ordering::Less,
             (None, None) => room_1.id.cmp(&room_2.id),

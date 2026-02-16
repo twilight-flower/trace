@@ -47,8 +47,8 @@ enum RoomIndexRetrievalError {
 //   Main   //
 //////////////
 
-fn get_room_index_by_identifier(rooms_info: &Vec<RoomWithCachedInfo>, identifier: &str) -> Result<usize, RoomIndexRetrievalError> {
-    if let Some(index) = rooms_info.iter().position(|room_info| &room_info.id == identifier) {
+fn get_room_index_by_identifier(rooms_info: &[RoomWithCachedInfo], identifier: &str) -> Result<usize, RoomIndexRetrievalError> {
+    if let Some(index) = rooms_info.iter().position(|room_info| room_info.id == identifier) {
         Ok(index)
     } else if let Some(index) = rooms_info.iter().position(|room_info| room_info.canonical_alias.as_ref().is_some_and(|alias| alias == identifier)) {
         Ok(index)
@@ -123,7 +123,7 @@ async fn messages_to_txt(events: &Vec<TimelineEvent>, room_info: &RoomWithCached
         };
 
         let event_timestamp_millis = event_deserialized.origin_server_ts().0.into();
-        let event_timestamp_string_representation = DateTime::from_timestamp_millis(event_timestamp_millis).expect(&format!("Found message with millisecond timestamp {}, which can't be converted to datetime.", event_timestamp_millis)).to_rfc3339_opts(SecondsFormat::Millis, true); // Add real error-handling, and also an option to use local time zones
+        let event_timestamp_string_representation = DateTime::from_timestamp_millis(event_timestamp_millis).unwrap_or_else(|| panic!("Found message with millisecond timestamp {}, which can't be converted to datetime.", event_timestamp_millis)).to_rfc3339_opts(SecondsFormat::Millis, true); // Add real error-handling, and also an option to use local time zones
 
         let event_sender_id = event_deserialized.sender();
         let event_sender_string_representation = user_id_to_string_representation(&mut user_ids_to_string_representations, room_info, event_sender_id).await?;
@@ -171,7 +171,7 @@ pub async fn export(client: &Client, rooms: Vec<String>, output_path: Option<Pat
         }
     }
 
-    let accessible_rooms_info = get_rooms_info(&client).await?; // This should be possible to optimize out for request-piles without names included, given client.resolve_room_alias and client.get_room. Although that might end up actually costlier if handled indelicately, since it'll involve more serial processing.
+    let accessible_rooms_info = get_rooms_info(client).await?; // This should be possible to optimize out for request-piles without names included, given client.resolve_room_alias and client.get_room. Although that might end up actually costlier if handled indelicately, since it'll involve more serial processing.
 
     for room_identifier in rooms {
         let room_to_export_info = match get_room_index_by_identifier(&accessible_rooms_info, &room_identifier) {
@@ -205,8 +205,8 @@ pub async fn export(client: &Client, rooms: Vec<String>, output_path: Option<Pat
             last_end_token = messages.end;
         }
 
-        let base_output_path = output_path.clone().unwrap_or_else(|| PathBuf::new());
-        let base_output_filename = format_export_filename(&room_to_export_info);
+        let base_output_path = output_path.clone().unwrap_or_default();
+        let base_output_filename = format_export_filename(room_to_export_info);
         if formats.contains(&ExportOutputFormat::Json) {
             let json_output_file = messages_to_json(&events);
             let mut json_output_path_buf = base_output_path.clone();

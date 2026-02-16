@@ -197,6 +197,7 @@ async fn handle_verification_request(verification_request: VerificationRequest) 
                     sas_verification.accept_with_settings(AcceptSettings::with_allowed_methods(vec![ShortAuthenticationString::Decimal])).await?;
                     let mut sas_verification_state_stream = sas_verification.changes();
                     while let Some(state) = sas_verification_state_stream.next().await {
+                        #[allow(clippy::single_match)] // Temp for development
                         match state {
                             SasState::KeysExchanged {decimals, ..} => {
                                 println!("Attempting verification. SAS decimals: {}, {}, {}", decimals.0, decimals.1, decimals.2);
@@ -225,7 +226,7 @@ async fn handle_verification_request(verification_request: VerificationRequest) 
                                 }
 
                             }
-                            _ =>(),
+                            _ => (),
                         }
                     }
                 } else {
@@ -288,7 +289,7 @@ async fn list_rooms(config: ListRooms, sessions_file: &SessionsFile, dirs: &Proj
 
     let printable_rooms = trace::get_rooms_info(&client).await?
         .into_iter()
-        .map(|room_info| PrintableRoom::from_room_info(room_info))
+        .map(PrintableRoom::from_room_info)
         .collect::<Vec<PrintableRoom>>();
     if config.json {
         println!("{}", serde_json::to_string(&printable_rooms).unwrap());
@@ -320,15 +321,13 @@ async fn session_list(config: SessionList, sessions_file: &SessionsFile, dirs: &
         .collect::<Vec<PrintableSession>>();
     if config.json {
         println!("{}", serde_json::to_string(&printable_sessions).unwrap());
-    } else {
-        if printable_sessions.len() > 0 {
-            println!("Currently-logged-in sessions:");
-            for session in printable_sessions {
-                println!("{} | {}", session.user_id, session.name) // Replace with properly-justified table-formatting in the future
-            }
-        } else {
-            println!("You have no sessions currently logged in.");
+    } else if !printable_sessions.is_empty() {
+        println!("Currently-logged-in sessions:");
+        for session in printable_sessions {
+            println!("{} | {}", session.user_id, session.name) // Replace with properly-justified table-formatting in the future
         }
+    } else {
+        println!("You have no sessions currently logged in.");
     }
 
     Ok(())
@@ -337,7 +336,7 @@ async fn session_list(config: SessionList, sessions_file: &SessionsFile, dirs: &
 async fn session_login(config: SessionLogin, sessions_file: &mut SessionsFile, dirs: &ProjectDirs) -> anyhow::Result<()> {
     let store_path = PathBuf::from(dirs.data_local_dir()).join(user_id_to_crypto_store_path(&config.user_id));
     let normalized_user_id = add_at_to_user_id_if_applicable(&config.user_id);
-    if let Ok(_) = sessions_file.get(&normalized_user_id) {
+    if sessions_file.get(&normalized_user_id).is_ok() {
         panic!("Tried to log into account {}, but you already have a session logged into this account.", &normalized_user_id); // Replace this with real error-handling.
     }
 
